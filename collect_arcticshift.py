@@ -147,7 +147,7 @@ def collect(args):
                 handle.write(json.dumps(record, ensure_ascii=False) + "\n")
                 total += 1
                 print(f"{total}: {post['id']} ({len(comments)} comments)")
-            last = posts[-1].get("created_utc")
+            if args.max_posts is not None and total >= args.max_posts:\n                break\n            last = posts[-1].get("created_utc")
             if last is None:
                 raise RuntimeError("Cannot paginate: last post has no created_utc")
             try:
@@ -164,7 +164,7 @@ def parse_args():
     p.add_argument("--after", required=True)
     p.add_argument("--before", required=True)
     p.add_argument("--output", required=True)
-    p.add_argument("--delay", type=float, default=0.35)
+    p.add_argument("--delay", type=float, default=0.35)\n    p.add_argument("--max-posts", type=int, default=None,\n                   help="Optional maximum number of posts to collect (useful for tests)")
     return p.parse_args()
 
 if __name__ == "__main__":
