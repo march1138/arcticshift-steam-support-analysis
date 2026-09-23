@@ -261,6 +261,7 @@ def collect(args: argparse.Namespace) -> None:
                     "url": post.get("url"),
                     "author_role": label(post.get("author")),
                     "comments_collected": len(comments),
+                    "automod_comments_excluded": automod_excluded,
                     "comments": comments,
                 }
 
