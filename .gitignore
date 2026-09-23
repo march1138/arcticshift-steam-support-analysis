@@ -1,0 +1,14 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.env
+data/
+output/
+analysis/
+*.jsonl
+*.csv
+*.parquet
+.DS_Store
+.vscode/
+.idea/
