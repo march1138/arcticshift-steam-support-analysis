@@ -101,7 +101,7 @@ def tree_nodes(payload: dict[str, Any]) -> list[Any]:
     return []
 
 
-def flatten(nodes: list[Any], label) -> list[dict[str, Any]]:
+def flatten(nodes: list[Any], label) -> tuple[list[dict[str, Any]], int]:
     out: list[dict[str, Any]] = []
 
     def visit(node: Any, depth: int = 0) -> None:
@@ -232,7 +232,7 @@ def collect(args: argparse.Namespace) -> None:
                     continue
 
                 label = pseudonymizer(post.get("author"))
-                comments = fetch_comments(
+                comments, automod_excluded = fetch_comments(
                     session,
                     str(post["id"]),
                     label,
@@ -262,7 +262,7 @@ def collect(args: argparse.Namespace) -> None:
 
                 print(
                     f"{total}: {post['id']} "
-                    f"({len(comments)} comments)"
+                    f"({len(comments)} comments, {automod_excluded} AutoModerator excluded)"
                 )
 
             if args.max_posts is not None and total >= args.max_posts:
