@@ -103,8 +103,11 @@ def tree_nodes(payload: dict[str, Any]) -> list[Any]:
 
 def flatten(nodes: list[Any], label) -> tuple[list[dict[str, Any]], int]:
     out: list[dict[str, Any]] = []
+    automod_excluded = 0
 
     def visit(node: Any, depth: int = 0) -> None:
+        nonlocal automod_excluded
+
         if not isinstance(node, dict):
             return
 
@@ -117,25 +120,30 @@ def flatten(nodes: list[Any], label) -> tuple[list[dict[str, Any]], int]:
             return
 
         if data.get("id") is not None and data.get("body") is not None:
-            out.append(
-                {
-                    "comment_id": str(data["id"]),
-                    "parent_id": (
-                        None
-                        if data.get("parent_id") is None
-                        else str(data["parent_id"])
-                    ),
-                    "created_utc": data.get("created_utc"),
-                    "body": data.get("body"),
-                    "score": data.get("score"),
-                    "depth": data.get("depth", depth),
-                    "author_role": label(data.get("author")),
-                    "is_submitter": bool(data.get("is_submitter", False)),
-                    "edited": data.get("edited"),
-                    "distinguished": data.get("distinguished"),
-                    "stickied": data.get("stickied"),
-                }
-            )
+            author = str(data.get("author") or "")
+
+            if author.lower() == "automoderator":
+                automod_excluded += 1
+            else:
+                out.append(
+                    {
+                        "comment_id": str(data["id"]),
+                        "parent_id": (
+                            None
+                            if data.get("parent_id") is None
+                            else str(data["parent_id"])
+                        ),
+                        "created_utc": data.get("created_utc"),
+                        "body": data.get("body"),
+                        "score": data.get("score"),
+                        "depth": data.get("depth", depth),
+                        "author_role": label(data.get("author")),
+                        "is_submitter": bool(data.get("is_submitter", False)),
+                        "edited": data.get("edited"),
+                        "distinguished": data.get("distinguished"),
+                        "stickied": data.get("stickied"),
+                    }
+                )
 
         replies = data.get("replies")
 
@@ -165,7 +173,7 @@ def flatten(nodes: list[Any], label) -> tuple[list[dict[str, Any]], int]:
             seen.add(comment_id)
             deduped.append(item)
 
-    return deduped
+    return deduped, automod_excluded
 
 
 def fetch_comments(
@@ -173,7 +181,7 @@ def fetch_comments(
     post_id: str,
     label,
     delay: float,
-) -> list[dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], int]:
     payload = api_get(
         session,
         "/comments/tree",
@@ -185,7 +193,6 @@ def fetch_comments(
     )
 
     return flatten(tree_nodes(payload), label)
-
 
 def collect(args: argparse.Namespace) -> None:
     output = Path(args.output)
