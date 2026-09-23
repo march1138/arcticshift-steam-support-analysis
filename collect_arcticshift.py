@@ -206,7 +206,8 @@ def fetch_comments(
         delay,
     )
 
-    comments, automod_excluded = flatten(tree_nodes(payload), label)\n    return comments, automod_excluded, payload.get("_archive_warning")
+    comments, automod_excluded = flatten(tree_nodes(payload), label)
+    return comments, automod_excluded, payload.get("_archive_warning")
 
 def collect(args: argparse.Namespace) -> None:
     output = Path(args.output)
