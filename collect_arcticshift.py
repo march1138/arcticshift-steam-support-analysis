@@ -210,6 +210,7 @@ def collect(args: argparse.Namespace) -> None:
 
     cursor = args.after
     total = 0
+    seen_post_ids: set[str] = set()
 
     with output.open("w", encoding="utf-8") as handle:
         while True:
@@ -238,10 +239,15 @@ def collect(args: argparse.Namespace) -> None:
                 if not isinstance(post, dict) or not post.get("id"):
                     continue
 
+                post_id = str(post["id"])
+                if post_id in seen_post_ids:
+                    continue
+                seen_post_ids.add(post_id)
+
                 label = pseudonymizer(post.get("author"))
                 comments, automod_excluded = fetch_comments(
                     session,
-                    str(post["id"]),
+                    post_id,
                     label,
                     args.delay,
                 )
@@ -250,7 +256,7 @@ def collect(args: argparse.Namespace) -> None:
                     "schema_version": "1.0",
                     "retrieved_utc": utc_now(),
                     "archive_source": "Arctic Shift",
-                    "post_id": str(post["id"]),
+                    "post_id": post_id,
                     "subreddit": post.get("subreddit") or args.subreddit,
                     "created_utc": post.get("created_utc"),
                     "title": post.get("title"),
@@ -283,17 +289,27 @@ def collect(args: argparse.Namespace) -> None:
                     "Cannot paginate: last post has no created_utc"
                 )
 
-            try:
-                dt = datetime.fromtimestamp(
-                    float(last_created) + 0.001,
-                    tz=timezone.utc,
-                )
-                cursor = dt.isoformat().replace("+00:00", "Z")
-            except (TypeError, ValueError, OSError):
-                cursor = str(last_created)
-
             if len(posts) < POST_LIMIT:
                 break
+
+            try:
+                dt = datetime.fromtimestamp(
+                    float(last_created),
+                    tz=timezone.utc,
+                )
+                next_cursor = dt.date().isoformat()
+            except (TypeError, ValueError, OSError):
+                raise RuntimeError(
+                    f"Cannot derive date cursor from created_utc={last_created!r}"
+                )
+
+            if next_cursor == cursor:
+                raise RuntimeError(
+                    "Pagination stalled within one calendar day; "
+                    "the API returned a full page without advancing the date."
+                )
+
+            cursor = next_cursor
 
     print(f"Done. Wrote {total} threads to {output}")
 
