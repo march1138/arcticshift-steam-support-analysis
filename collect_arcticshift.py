@@ -50,6 +50,20 @@ def api_get(
             time.sleep(wait)
             continue
 
+        # Arctic Shift occasionally cannot build a comment tree for an
+        # individual archived post. Treat that as missing comment data rather
+        # than aborting a multi-thousand-thread collection.
+        if endpoint == "/comments/tree" and response.status_code in (404, 422):
+            print(
+                f"Comment tree unavailable for {params.get('link_id')} "
+                f"(HTTP {response.status_code}); keeping post with no comments."
+            )
+            time.sleep(delay)
+            return {
+                "data": [],
+                "_archive_warning": f"comments_tree_http_{response.status_code}",
+            }
+
         response.raise_for_status()
         payload = response.json()
         time.sleep(delay)
@@ -181,7 +195,7 @@ def fetch_comments(
     post_id: str,
     label,
     delay: float,
-) -> tuple[list[dict[str, Any]], int]:
+) -> tuple[list[dict[str, Any]], int, str | None]:
     payload = api_get(
         session,
         "/comments/tree",
@@ -245,7 +259,7 @@ def collect(args: argparse.Namespace) -> None:
                 seen_post_ids.add(post_id)
 
                 label = pseudonymizer(post.get("author"))
-                comments, automod_excluded = fetch_comments(
+                comments, automod_excluded, comment_archive_warning = fetch_comments(
                     session,
                     post_id,
                     label,
@@ -268,6 +282,7 @@ def collect(args: argparse.Namespace) -> None:
                     "author_role": label(post.get("author")),
                     "comments_collected": len(comments),
                     "automod_comments_excluded": automod_excluded,
+                    "comment_archive_warning": comment_archive_warning,
                     "comments": comments,
                 }
 
