@@ -52,10 +52,27 @@ source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## Collect the March-July sample
+## Run from GitHub Actions
+
+Open the repository's **Actions** tab, choose **Run Arctic Shift Collection**, then choose **Run workflow**.
+
+For the first validation run, use the defaults:
+
+- subreddit: `SteamSupport`
+- after: `2026-03-01`
+- before: `2026-08-01`
+- max_posts: `5`
+
+When the run finishes, open the workflow run and download the artifact at the bottom of the run summary. It contains `steamsupport.jsonl`.
+
+After validating the five-thread sample, set `max_posts` to `0` for an unlimited run across the selected date range.
+
+GitHub Actions artifacts are retained for 7 days.
+
+## Collect locally
 
 ```bash
-python collect_arcticshift.py --subreddit SteamSupport --after 2026-03-01 --before 2026-08-01 --output data/steamsupport_2026-03-01_2026-07-31.jsonl
+python collect_arcticshift.py --subreddit SteamSupport --after 2026-03-01 --before 2026-08-01 --output data/steamsupport_2026-03-01_2026-07-31.jsonl\n\n# Five-post validation run\npython collect_arcticshift.py --subreddit SteamSupport --after 2026-03-01 --before 2026-08-01 --max-posts 5 --output data/test.jsonl
 ```
 
 The collector uses ascending date pagination and requests at most 100 posts at a time. For each post it requests the archived comment tree, then writes one JSON object per thread.
