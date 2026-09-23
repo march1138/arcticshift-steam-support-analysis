@@ -284,8 +284,12 @@ def collect(args: argparse.Namespace) -> None:
                 )
 
             try:
-                cursor = str(float(last_created) + 0.001)
-            except (TypeError, ValueError):
+                dt = datetime.fromtimestamp(
+                    float(last_created) + 0.001,
+                    tz=timezone.utc,
+                )
+                cursor = dt.isoformat().replace("+00:00", "Z")
+            except (TypeError, ValueError, OSError):
                 cursor = str(last_created)
 
             if len(posts) < POST_LIMIT:
