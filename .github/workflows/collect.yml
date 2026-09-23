@@ -1,0 +1,70 @@
+name: Run Arctic Shift Collection
+
+on:
+  workflow_dispatch:
+    inputs:
+      subreddit:
+        description: "Subreddit (without r/)"
+        required: true
+        default: "SteamSupport"
+        type: string
+      after:
+        description: "Start date (YYYY-MM-DD)"
+        required: true
+        default: "2026-03-01"
+        type: string
+      before:
+        description: "End date, exclusive (YYYY-MM-DD)"
+        required: true
+        default: "2026-08-01"
+        type: string
+      max_posts:
+        description: "Maximum posts; 0 means no limit"
+        required: true
+        default: "5"
+        type: string
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Collect archived threads
+        shell: bash
+        run: |
+          mkdir -p data
+          ARGS=(
+            --subreddit "${{ inputs.subreddit }}"
+            --after "${{ inputs.after }}"
+            --before "${{ inputs.before }}"
+            --output "data/steamsupport.jsonl"
+          )
+          if [ "${{ inputs.max_posts }}" != "0" ]; then
+            ARGS+=(--max-posts "${{ inputs.max_posts }}")
+          fi
+          python collect_arcticshift.py "${ARGS[@]}"
+
+      - name: Show collection summary
+        shell: bash
+        run: |
+          echo "Threads collected: $(wc -l < data/steamsupport.jsonl)"
+          ls -lh data/steamsupport.jsonl
+
+      - name: Upload JSONL artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: arcticshift-steamsupport-${{ inputs.after }}-to-${{ inputs.before }}
+          path: data/steamsupport.jsonl
+          if-no-files-found: error
+          retention-days: 7
